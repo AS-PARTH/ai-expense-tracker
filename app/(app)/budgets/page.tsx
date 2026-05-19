@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { Spinner } from '@/components/Spinner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import type { Budget, BudgetStatus, Category, UserCategory } from '@/types';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatBudgetStatus } from '@/lib/format';
 
 export default function BudgetsPage() {
   const cats = useCategories();
@@ -356,14 +356,16 @@ export default function BudgetsPage() {
 }
 
 function StatusBadge({ status }: { status: BudgetStatus }) {
-  const { level, percent } = status;
+  const { level, spent, monthlyLimit } = status;
+  if (spent === 0 || monthlyLimit === 0) {
+    return <span className="text-zinc-400">—</span>;
+  }
   const cls =
     level === 'over'
       ? 'bg-red-100 text-red-800 ring-1 ring-inset ring-red-200'
       : level === 'warn'
         ? 'bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200'
         : 'bg-emerald-100 text-emerald-800 ring-1 ring-inset ring-emerald-200';
-  const label = level === 'over' ? 'Over budget' : level === 'warn' ? 'Near limit' : 'On track';
   const dot =
     level === 'over' ? 'bg-red-500' : level === 'warn' ? 'bg-amber-500' : 'bg-emerald-500';
   return (
@@ -371,7 +373,7 @@ function StatusBadge({ status }: { status: BudgetStatus }) {
       className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}
     >
       <span className={`inline-block h-1.5 w-1.5 rounded-full ${dot}`} />
-      {label} ({percent}%)
+      {formatBudgetStatus(spent, monthlyLimit)}
     </span>
   );
 }
