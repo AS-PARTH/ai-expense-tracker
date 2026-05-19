@@ -71,7 +71,11 @@ This application lets users track expenses, manage budgets, analyze trends, and 
 Ensure you have Node.js and a MongoDB instance running locally or via Atlas.
 
 ### 2. Environment Setup
-Create a `.env.local` file in the root directory:
+Copy the template environment file `.env.example` to `.env.local` in the root directory and fill in your keys:
+```bash
+cp .env.example .env.local
+```
+Ensure the following variables are defined:
 ```env
 MONGODB_URI=your-mongodb-connection-string
 JWT_SECRET=your-jwt-signing-secret
