@@ -14,7 +14,9 @@ export async function GET(req: NextRequest) {
     const user = await User.findById(auth.userId).lean();
     if (!user) return fail('User not found', 404, 'NOT_FOUND');
 
-    return ok({ user: toPublicUser(user) });
+    const res = ok({ user: toPublicUser(user) });
+    res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    return res;
   } catch (err) {
     return serverError(err);
   }
