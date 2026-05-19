@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth';
 import { expenseInputSchema } from '@/lib/validators';
 import { ok, fail, unauthorized, serverError } from '@/lib/api';
 import { toExpense } from '@/lib/serialize';
+import { timed } from '@/lib/timing';
 
 export async function GET(req: NextRequest) {
   try {
@@ -27,7 +28,9 @@ export async function GET(req: NextRequest) {
       query.date = { $gte: start, $lt: end };
     }
 
-    const docs = await Expense.find(query).sort({ date: -1 }).limit(500);
+    const docs = await timed('expenses.find', () =>
+      Expense.find(query).sort({ date: -1 }).limit(500).lean()
+    );
     return ok(docs.map(toExpense));
   } catch (err) {
     return serverError(err);

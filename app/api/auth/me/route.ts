@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     if (!auth) return unauthorized();
 
     await dbConnect();
-    const user = await User.findById(auth.userId);
+    const user = await User.findById(auth.userId).lean();
     if (!user) return fail('User not found', 404, 'NOT_FOUND');
 
     return ok({ user: toPublicUser(user) });

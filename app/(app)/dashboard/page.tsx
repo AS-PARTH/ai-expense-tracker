@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { apiFetch } from '@/lib/api-client';
 import { formatCurrency } from '@/lib/format';
-import type { DashboardSummary, BudgetStatus, Budget } from '@/types';
+import type { DashboardSummary, BudgetStatus } from '@/types';
 import { toast } from 'sonner';
 
 const COLORS = ['#0ea5e9', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#6b7280'];
@@ -28,12 +28,11 @@ export default function DashboardPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [s, b] = await Promise.all([
-          apiFetch<DashboardSummary>('/api/dashboard/summary'),
-          apiFetch<{ budgets: Budget[]; statuses: BudgetStatus[] }>('/api/budgets'),
-        ]);
-        setSummary(s);
-        setStatuses(b.statuses);
+        const data = await apiFetch<{ summary: DashboardSummary; statuses: BudgetStatus[] }>(
+          '/api/dashboard/summary'
+        );
+        setSummary(data.summary);
+        setStatuses(data.statuses);
       } catch (err) {
         toast.error('Failed to load dashboard');
         console.error(err);

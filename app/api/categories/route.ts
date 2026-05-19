@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     if (!auth) return unauthorized();
     await dbConnect();
 
-    const customs = await CategoryModel.find({ userId: auth.userId }).sort({ name: 1 });
+    const customs = await CategoryModel.find({ userId: auth.userId }).sort({ name: 1 }).lean();
     const customNames = customs.map((c) => c.name);
     const merged = Array.from(new Set([...DEFAULT_CATEGORIES, ...customNames]));
 
