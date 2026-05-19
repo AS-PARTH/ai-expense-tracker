@@ -100,8 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     clearToken();
     setUser(null);
-    router.push('/login');
-  }, [router]);
+    window.location.href = '/login';
+  }, []);
 
   return (
     <Ctx.Provider value={{ user, loading, login, register, logout }}>
