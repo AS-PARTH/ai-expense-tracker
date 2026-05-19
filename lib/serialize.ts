@@ -1,9 +1,35 @@
-import type { ExpenseDoc } from '@/models/Expense';
-import type { BudgetDoc } from '@/models/Budget';
-import type { UserDoc } from '@/models/User';
-import type { Expense, Budget, PublicUser } from '@/types';
+import type { Types } from 'mongoose';
+import type { Expense, Budget, PublicUser, Category } from '@/types';
 
-export function toPublicUser(u: UserDoc): PublicUser {
+type IdLike = Types.ObjectId | { toString(): string };
+type DateLike = Date;
+
+interface RawUser {
+  _id: IdLike;
+  email: string;
+  name: string;
+  createdAt: DateLike;
+}
+
+interface RawExpense {
+  _id: IdLike;
+  userId: IdLike;
+  amount: number;
+  category: Category;
+  date: DateLike;
+  note?: string;
+  createdAt: DateLike;
+  updatedAt: DateLike;
+}
+
+interface RawBudget {
+  _id: IdLike;
+  userId: IdLike;
+  category: Category;
+  monthlyLimit: number;
+}
+
+export function toPublicUser(u: RawUser): PublicUser {
   return {
     _id: u._id.toString(),
     email: u.email,
@@ -12,7 +38,7 @@ export function toPublicUser(u: UserDoc): PublicUser {
   };
 }
 
-export function toExpense(e: ExpenseDoc): Expense {
+export function toExpense(e: RawExpense): Expense {
   return {
     _id: e._id.toString(),
     userId: e.userId.toString(),
@@ -25,7 +51,7 @@ export function toExpense(e: ExpenseDoc): Expense {
   };
 }
 
-export function toBudget(b: BudgetDoc): Budget {
+export function toBudget(b: RawBudget): Budget {
   return {
     _id: b._id.toString(),
     userId: b.userId.toString(),

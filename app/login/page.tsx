@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api-client';
 import { PasswordInput } from '@/components/PasswordInput';
+import { Spinner } from '@/components/Spinner';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -56,8 +57,9 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full cursor-pointer rounded-md bg-zinc-900 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-zinc-900 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
+            {submitting && <Spinner size={14} />}
             {submitting ? 'Signing in…' : 'Log in'}
           </button>
         </form>

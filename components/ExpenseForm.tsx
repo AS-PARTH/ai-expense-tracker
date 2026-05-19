@@ -6,6 +6,8 @@ import { apiFetch, ApiError } from '@/lib/api-client';
 import { type AIExtractResult, type Category, type Expense, type UserCategory } from '@/types';
 import { todayISO } from '@/lib/format';
 import { CategoryPicker } from './CategoryPicker';
+import { Spinner } from './Spinner';
+import { Sparkles } from 'lucide-react';
 
 interface Props {
   initial?: Expense | null;
@@ -128,9 +130,11 @@ export function ExpenseForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <div className="rounded-md border border-dashed border-sky-300 bg-sky-50 p-3">
-        <label className="block text-sm font-medium text-sky-900">
-          AI auto-fill (paste a bill, SMS, or receipt)
+      <div className="rounded-xl border border-dashed border-sky-300 bg-linear-to-br from-sky-50 to-violet-50 p-4 shadow-sm">
+        <label className="flex items-center gap-2 text-sm font-semibold text-sky-900">
+          <Sparkles size={14} className="text-sky-600" />
+          AI auto-fill
+          <span className="font-normal text-sky-700/80">— paste a bill, SMS, or receipt</span>
         </label>
         <textarea
           rows={3}
@@ -144,8 +148,9 @@ export function ExpenseForm({
             type="button"
             onClick={runAI}
             disabled={aiBusy}
-            className="cursor-pointer rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
+            {aiBusy ? <Spinner size={14} /> : <Sparkles size={14} />}
             {aiBusy ? 'Extracting…' : 'Auto-fill with AI'}
           </button>
           {aiHint && <p className="text-xs text-sky-800">{aiHint}</p>}
@@ -210,8 +215,9 @@ export function ExpenseForm({
         <button
           type="submit"
           disabled={saving}
-          className="cursor-pointer rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
+          {saving && <Spinner size={14} />}
           {saving ? 'Saving…' : initial ? 'Update' : 'Add expense'}
         </button>
       </div>

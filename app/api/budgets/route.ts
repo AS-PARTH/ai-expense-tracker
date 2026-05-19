@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const { start, end } = monthRange(monthParam);
 
     const [budgets, spendAgg] = await Promise.all([
-      Budget.find({ userId: auth.userId }),
+      Budget.find({ userId: auth.userId }).lean(),
       Expense.aggregate<{ _id: Category; total: number }>([
         {
           $match: {

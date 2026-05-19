@@ -15,6 +15,7 @@ export interface UserCategory {
   userId: string;
   name: string;
   createdAt: string;
+  usage?: number;
 }
 
 export interface PublicUser {
