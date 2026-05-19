@@ -2,9 +2,12 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
+import { Trash2 } from 'lucide-react';
 import { apiFetch, ApiError } from '@/lib/api-client';
 import { useCategories } from '@/lib/use-categories';
-import { CategoryPicker } from '@/components/CategoryPicker';
+import { Skeleton } from '@/components/Skeleton';
+import { Spinner } from '@/components/Spinner';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import type { Budget, BudgetStatus, Category, UserCategory } from '@/types';
 import { formatCurrency } from '@/lib/format';
 
@@ -122,6 +125,55 @@ export default function BudgetsPage() {
     setEdits((prev) => ({ ...prev, [cat.name]: prev[cat.name] ?? '' }));
   }
 
+  const [pendingDelete, setPendingDelete] = useState<UserCategory | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [forceDelete, setForceDelete] = useState(false);
+
+  function startDeleteCategory(cat: UserCategory) {
+    setForceDelete(false);
+    setPendingDelete(cat);
+  }
+
+  async function confirmDeleteCategory() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      const url = `/api/categories/${pendingDelete._id}${forceDelete ? '?force=1' : ''}`;
+      const res = await apiFetch<{ deleted: true; reassigned: number; reassignedTo: string }>(
+        url,
+        { method: 'DELETE' }
+      );
+      cats.removeCustom(pendingDelete._id);
+      setEdits((prev) => {
+        const next = { ...prev };
+        delete next[pendingDelete.name];
+        return next;
+      });
+      setBudgets((prev) => prev.filter((b) => b.category !== pendingDelete.name));
+      setStatuses((prev) => prev.filter((s) => s.category !== pendingDelete.name));
+      setPendingDelete(null);
+      setForceDelete(false);
+      if (res.reassigned > 0) {
+        toast.success(
+          `Category deleted · ${res.reassigned} expense${res.reassigned === 1 ? '' : 's'} reassigned to "${res.reassignedTo}"`
+        );
+      } else {
+        toast.success('Category deleted');
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'IN_USE') {
+        // Reveal force-confirm step
+        setForceDelete(true);
+        return;
+      }
+      const msg = err instanceof ApiError ? err.message : 'Delete failed';
+      toast.error(msg);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const customByName = new Map(cats.custom.map((c) => [c.name, c]));
   const statusMap = new Map(statuses.map((s) => [s.category, s]));
 
   return (
@@ -138,8 +190,9 @@ export default function BudgetsPage() {
           <button
             onClick={saveAll}
             disabled={savingAll || dirtyItems.length === 0}
-            className="cursor-pointer rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
+            {savingAll && <Spinner size={14} />}
             {savingAll
               ? 'Saving…'
               : dirtyItems.length > 0
@@ -149,67 +202,155 @@ export default function BudgetsPage() {
         </div>
       </div>
 
-      {loading ? (
-        <p className="text-sm text-zinc-500">Loading…</p>
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
-              <tr>
-                <th className="px-4 py-2">Category</th>
-                <th className="px-4 py-2">Monthly limit</th>
-                <th className="px-4 py-2">Spent this month</th>
-                <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((c) => {
+      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <table className="w-full text-sm">
+          <thead className="bg-zinc-50/80 text-left text-xs uppercase tracking-wide text-zinc-500">
+            <tr>
+              <th className="px-4 py-2.5">Category</th>
+              <th className="px-4 py-2.5">Monthly limit</th>
+              <th className="px-4 py-2.5">Spent this month</th>
+              <th className="px-4 py-2.5">Status</th>
+              <th className="px-4 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-t border-zinc-100">
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-7 w-28" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-5 w-28" /></td>
+                  <td className="px-4 py-3"><Skeleton className="ml-auto h-7 w-16" /></td>
+                </tr>
+              ))
+            ) : (
+              rows.map((c) => {
                 const s = statusMap.get(c);
                 const value = edits[c] ?? '';
                 const dirty = value !== originalFor(c);
+                const customCat = customByName.get(c);
                 return (
-                  <tr key={c} className="border-t border-zinc-100">
-                    <td className="px-4 py-2 capitalize">{c}</td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="number"
-                        min="0"
-                        value={value}
-                        onChange={(e) =>
-                          setEdits((prev) => ({ ...prev, [c]: e.target.value }))
-                        }
-                        placeholder="0"
-                        className="w-28 rounded-md border border-zinc-300 px-2 py-1 text-sm"
-                      />
-                      {dirty && <span className="ml-2 text-xs text-amber-700">●</span>}
+                  <tr key={c} className="border-t border-zinc-100 transition hover:bg-zinc-50/60">
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="capitalize text-zinc-800">{c}</span>
+                        {customCat && (
+                          <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">
+                            custom
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-4 py-2">
-                      {s ? formatCurrency(s.spent) : <span className="text-zinc-400">—</span>}
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={value}
+                          onChange={(e) =>
+                            setEdits((prev) => ({ ...prev, [c]: e.target.value }))
+                          }
+                          placeholder="0"
+                          className="w-28 rounded-md border border-zinc-300 px-2 py-1 text-sm focus:border-zinc-900 focus:outline-none"
+                        />
+                        {dirty && (
+                          <span
+                            className="inline-block h-2 w-2 rounded-full bg-amber-500"
+                            title="Unsaved change"
+                          />
+                        )}
+                      </div>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2.5">
+                      {s ? (
+                        <span className="font-medium text-zinc-800">
+                          {formatCurrency(s.spent)}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
                       {!s || s.monthlyLimit === 0 ? (
                         <span className="text-zinc-400">—</span>
                       ) : (
                         <StatusBadge status={s} />
                       )}
                     </td>
-                    <td className="px-4 py-2 text-right">
-                      <button
-                        onClick={() => saveOne(c)}
-                        disabled={savingCat === c}
-                        className="cursor-pointer rounded-md border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {savingCat === c ? 'Saving…' : 'Save'}
-                      </button>
+                    <td className="px-4 py-2.5 text-right">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() => saveOne(c)}
+                          disabled={savingCat === c}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {savingCat === c && <Spinner size={12} />}
+                          {savingCat === c ? 'Saving…' : 'Save'}
+                        </button>
+                        {customCat && (
+                          <button
+                            onClick={() => startDeleteCategory(customCat)}
+                            aria-label={`Delete ${c} category`}
+                            title="Delete category"
+                            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-zinc-500 transition hover:bg-red-50 hover:text-red-700"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title={forceDelete ? 'This category is in use' : 'Delete this category?'}
+        description={
+          pendingDelete ? (
+            forceDelete ? (
+              <span>
+                <span className="font-medium capitalize text-zinc-900">{pendingDelete.name}</span>{' '}
+                is used by{' '}
+                <span className="font-medium text-zinc-900">
+                  {pendingDelete.usage ?? 0} expense
+                  {(pendingDelete.usage ?? 0) === 1 ? '' : 's'}
+                </span>
+                . Confirm to reassign them to <span className="font-medium">&quot;other&quot;</span> and delete the category.
+                Any per-category budget will also be removed. This cannot be undone.
+              </span>
+            ) : (
+              <span>
+                You&apos;re about to delete{' '}
+                <span className="font-medium capitalize text-zinc-900">{pendingDelete.name}</span>.
+                {(pendingDelete.usage ?? 0) > 0 && (
+                  <>
+                    {' '}
+                    It has{' '}
+                    <span className="font-medium text-zinc-900">
+                      {pendingDelete.usage} expense{pendingDelete.usage === 1 ? '' : 's'}
+                    </span>{' '}
+                    using it.
+                  </>
+                )}
+              </span>
+            )
+          ) : null
+        }
+        confirmLabel={forceDelete ? 'Reassign & delete' : 'Delete'}
+        busy={deleting}
+        onConfirm={confirmDeleteCategory}
+        onCancel={() => {
+          if (deleting) return;
+          setPendingDelete(null);
+          setForceDelete(false);
+        }}
+      />
     </div>
   );
 }
@@ -218,13 +359,18 @@ function StatusBadge({ status }: { status: BudgetStatus }) {
   const { level, percent } = status;
   const cls =
     level === 'over'
-      ? 'bg-red-100 text-red-800'
+      ? 'bg-red-100 text-red-800 ring-1 ring-inset ring-red-200'
       : level === 'warn'
-        ? 'bg-amber-100 text-amber-800'
-        : 'bg-emerald-100 text-emerald-800';
-  const label = level === 'over' ? 'Over budget' : level === 'warn' ? 'Near limit' : 'OK';
+        ? 'bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200'
+        : 'bg-emerald-100 text-emerald-800 ring-1 ring-inset ring-emerald-200';
+  const label = level === 'over' ? 'Over budget' : level === 'warn' ? 'Near limit' : 'On track';
+  const dot =
+    level === 'over' ? 'bg-red-500' : level === 'warn' ? 'bg-amber-500' : 'bg-emerald-500';
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}
+    >
+      <span className={`inline-block h-1.5 w-1.5 rounded-full ${dot}`} />
       {label} ({percent}%)
     </span>
   );
