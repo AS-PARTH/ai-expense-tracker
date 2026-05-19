@@ -6,6 +6,11 @@ This application lets users track expenses, manage budgets, analyze trends, and 
 
 ---
 
+🔗 **Live Demo URL**: [https://ai-expense-tracker-task.vercel.app](https://ai-expense-tracker-task.vercel.app)  
+📦 **GitHub Repository**: [https://github.com/AS-PARTH/ai-expense-tracker](https://github.com/AS-PARTH/ai-expense-tracker)
+
+---
+
 ## ✨ Key Features & "Cool Things" Integrated
 
 ### 1. 🤖 Dynamic AI Expense Auto-Fill
